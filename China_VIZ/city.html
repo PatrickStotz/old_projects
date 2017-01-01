@@ -1,0 +1,81 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="stylesheet" href="./lib/leaflet.css">
+    <link rel="stylesheet" href="./lib/leaflet.label.css">
+    <style type="text/css">
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        
+        html, body, #demo-map {
+            height: 100%;
+            background: white
+
+        }
+    </style>
+    <script src="./lib/leaflet.js"></script>
+    <script src="./lib/leaflet.label.js"></script>
+    <script src="./lib/leaflet.ajax.min.js"></script>
+</head>
+<body>
+    <div id="demo-map"></div>
+    <script>
+    // initiaize map, set extends and basemap layers
+    var northWest = new L.LatLng(22.878, 113.745); 
+    var southEast = new L.LatLng(22.301, 114.630); 
+    var restrictBounds = new L.LatLngBounds(northWest, southEast); 
+    var mapOptions = { 
+        maxBounds: restrictBounds,
+        minZoom: 10,
+        maxZoom: 12,
+        scrollWheelZoom: false
+    };
+
+    var map = L.map('demo-map', mapOptions).setView([22.62, 114.18], 11);
+    
+    // load polygons from geoJSON file
+    var geojsonLayer = new L.GeoJSON.AJAX("./city.geojson", {
+
+        style:{
+            "fillColor": "#e60000" ,
+            "weight": 0, 
+            "color": "black", 
+            "fillOpacity": 0
+        },
+
+        onEachFeature: function (feature, layer) {
+            //add label on hover
+            layer.bindLabel("<b>EN: </b>" + feature.properties.name_en + "<br><b>PI: </b>"+ feature.properties.name_pi + "<br><b>CN: </b>" + feature.properties.name_cn);
+            layer.on({
+                mouseover: highlightFeature,
+                mouseout: resetHighlight,
+            })
+        }
+    });
+
+    function highlightFeature(e) {
+        var layer = e.target;
+        layer.setStyle({
+            fillOpacity: 0.35,
+            weight: 1.5,
+        });
+
+        if (!L.Browser.ie && !L.Browser.opera) {
+            layer.bringToFront();
+        }
+    }
+
+    function resetHighlight(e) {
+        geojsonLayer.resetStyle(e.target);
+    }
+
+    var imageUrl = './city.png',
+    imageBounds = [[22.878, 113.745], [22.301, 114.630]];
+    L.imageOverlay(imageUrl, imageBounds).addTo(map);
+    geojsonLayer.addTo(map);
+
+  </script>
+</body>
+</html>
