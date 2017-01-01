@@ -1,0 +1,237 @@
+<!doctype html>
+<html>
+<head>
+    <link rel="stylesheet" href="./lib/leaflet.css">
+    <link rel="stylesheet" href="./lib/leaflet.label.css">
+    <style type="text/css">
+        body {
+            padding: 0;
+            margin: 0;
+        }
+        
+        html, body, #travel-map {
+            height: 100%;
+            background: black;
+        }
+
+        /*svg animation for blinking markers*/
+        .blink_me {
+            animation: blinking 1.2s infinite ease-in-out alternate;
+            -webkit-animation: blinking 1.2s infinite ease-in-out alternate;
+        }
+
+        @keyframes blinking {
+            0% { 
+                transform: scale(1.4);
+                transform-origin: 50% 50%;
+            }
+            100% { 
+                transform: scale(0.75);
+                transform-origin: 50% 50%;
+            }
+        }
+
+        @-webkit-keyframes blinking {
+            0% { 
+                transform: scale(1.4);
+                transform-origin: 50% 50%;
+            }
+            100% { 
+                transform: scale(0.75);
+                transform-origin: 50% 50%;
+            }
+        }
+
+        .leaflet-label {
+            font-weight: normal;
+            background: rgba(225, 225, 225, 0.9);
+            border-style: none;
+            font-size: 14px;
+            padding: 0px 12px;
+        }
+
+        .leaflet-container {
+            font: 14px/1.3 "Helvetica Neue", Arial, Helvetica, sans-serif;
+        }
+
+    </style>
+    <script src="./lib/leaflet.js"></script>
+    <script src="./lib/leaflet.label.js"></script>
+    <script src="https://rawgit.com/calvinmetcalf/leaflet-ajax/master/dist/leaflet.ajax.min.js"></script>
+</head>
+<body>
+    <div id="travel-map"></div>
+    <script>
+    // insert image with backward link
+    document.write('<a href="http://www.wanderingoff.de"><img src="./img/back.png" border="0" height="26" style="position:absolute; left:50px; top:10px; margin:0px; padding:0px"></a>')
+
+    var southWest = L.latLng(-90, -200),
+        northEast = L.latLng(90, 220),
+        bounds = L.latLngBounds(southWest, northEast);
+
+    var mapOptions = {
+        minZoom: 2,
+        maxZoom: 9,
+        maxBounds: bounds
+    };
+
+    var map = L.map('travel-map', mapOptions).setView([30, 10], 3);
+    var Tiles = L.tileLayer('http://{s}.tile.stamen.com/toner-background/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+        continuousWorld: false,
+        noWrap: true
+    });
+    var Tiles2 = L.tileLayer('http://{s}.tile.stamen.com/toner/{z}/{x}/{y}.png', {
+        attribution: '&copy; <a href="http://openstreetmap.org">OpenStreetMap</a> contributors, <a href="http://creativecommons.org/licenses/by-sa/2.0/">CC-BY-SA</a>',
+        continuousWorld: false,
+        noWrap: true
+    });
+
+    var stops_old = [];
+    var stops_old2 = [];
+    var stops_old3 = [new L.LatLng(-25,-179.99)]; // manually adding line from dateline to Hawaii
+    var stops_old4 = [];
+    var stops_new = [];
+
+    // load route from geoJSON file
+    var geojsonRoute = new L.GeoJSON.AJAX("./route.geojson", {
+        
+        // set circle style depending on past/present/future
+        style: function(feature) {
+            if (feature.properties.time == 0){
+                return {fillColor: "#FC6100"};
+            }
+            if (feature.properties.time == 1){
+                return {fillColor: "#FC6100", className: "blink_me"};
+            }
+            if (feature.properties.time == 2){
+                return {fillColor: "#00BDFC"};
+            }
+        },
+
+        // draw markers
+        pointToLayer: function(feature, latlng) {
+            if (feature.properties.duration > 7){
+                return new L.CircleMarker(latlng, {radius: 10, fillOpacity: 0.8, stroke: false, className: "circle_marker"});
+            }
+            else {
+                return new L.CircleMarker(latlng, {radius: 6, fillOpacity: 0.8, stroke: false, className: "circle_marker"});
+            }
+        },
+
+        // styling popups
+        onEachFeature: function (feature, layer) {
+            var label_place = ""
+            var label_time1 = ""
+            var label_time2 = ""
+            var label_time3 = ""
+            var label_img = ""
+            var label_link1 = ""
+            var label_link2 = ""
+            var label_link3 = ""
+            var label_link4 = ""
+            var label_link5 = ""
+            var label_link6 = ""
+            var label_link7 = ""
+            var label_post_all = ""
+        
+            label_place = "<dl><dt><b>" + feature.properties.city + ", " + feature.properties.country + "</dt></b><dt>"
+            if (feature.properties.from_1){ label_time1 = "<dt>" + feature.properties.from_1 + " - " + feature.properties.to_1 + "</dt>"}
+            if (feature.properties.from_2){ label_time2 = "<dt>" + feature.properties.from_2 + " - " + feature.properties.to_2 + "</dt>"}
+            if (feature.properties.from_3){ label_time3 = "<dt>" + feature.properties.from_3 + " - " + feature.properties.to_3 + "</dt>"}
+            if (feature.properties.image_link){ label_img = "<img width=280px src='./img/" + feature.properties.image_link + ".jpg'/>"}
+            if (feature.properties.link_1){ label_link1 = "<dt><a href=" + feature.properties.link_1 + '>' + feature.properties.link_1_txt + "</a></dt>"}
+            if (feature.properties.link_2){ label_link2 = "<dt><a href=" + feature.properties.link_2 + '>' + feature.properties.link_2_txt + "</a></dt>"}
+            if (feature.properties.link_3){ label_link3 = "<dt><a href=" + feature.properties.link_3 + '>' + feature.properties.link_3_txt + "</a></dt>"}
+            if (feature.properties.link_4){ label_link4 = "<dt><a href=" + feature.properties.link_4 + '>' + feature.properties.link_4_txt + "</a></dt>"}
+            if (feature.properties.link_5){ label_link5 = "<dt><a href=" + feature.properties.link_5 + '>' + feature.properties.link_5_txt + "</a></dt>"}
+            if (feature.properties.link_6){ label_link6 = "<dt><a href=" + feature.properties.link_6 + '>' + feature.properties.link_6_txt + "</a></dt>"}
+            if (feature.properties.link_7){ label_link7 = "<dt><a href=" + feature.properties.link_7 + '>' + feature.properties.link_7_txt + "</a></dt>"}
+            if (feature.properties.posts_all){ label_post_all = "<br><b><dt><a href=" + feature.properties.posts_all + '>' + feature.properties.all_txt + "<b></a></dt>"}
+
+            label_text = label_place + label_time1 + label_time2 + label_time3 + label_img + label_link1 + label_link2 + label_link3 + label_link4 + label_link5 + label_link6 + label_link7 + label_post_all
+
+            // layer.bindLabel(label_text); // bindLabel for hover, bindPopup for popup
+            layer.bindPopup(label_text);
+
+            // populate LatLng-Arrays for route polylines later on
+            // TODO: find more elegant solution for linedrawing & leapfrogging
+            // line from HH to Christchurch
+            if (feature.properties.stop > 0 && feature.properties.stop < 21 && feature.properties.time < 2){
+                var X = feature.geometry.coordinates[0];
+                var Y = feature.geometry.coordinates[1];
+                stops_old.push(new L.LatLng(Y,X));
+            }            
+
+            // line from Auckland to dateline (skipping Christchurch - Auckland)
+            if (feature.properties.stop > 0 && feature.properties.stop > 20 && feature.properties.stop < 22 && feature.properties.time < 2){
+                var X = feature.geometry.coordinates[0];
+                var Y = feature.geometry.coordinates[1];
+                stops_old2.push(new L.LatLng(Y,X));
+            }
+
+            // line from dateline to LA
+            if (feature.properties.stop > 0 && feature.properties.stop > 21 && feature.properties.stop < 26 && feature.properties.time < 2){
+                var X = feature.geometry.coordinates[0];
+                var Y = feature.geometry.coordinates[1];
+                stops_old3.push(new L.LatLng(Y,X));    
+            }
+
+            // line from Las Vegas to end (skipping US roadtrip)
+            if (feature.properties.stop > 0 && feature.properties.stop > 25 && feature.properties.time < 2){
+                var X = feature.geometry.coordinates[0];
+                var Y = feature.geometry.coordinates[1];
+                stops_old4.push(new L.LatLng(Y,X));    
+            }
+
+            // line for future travels
+            if (feature.properties.stop > 0 && feature.properties.time > 0){
+                var X = feature.geometry.coordinates[0];
+                var Y = feature.geometry.coordinates[1];
+                stops_new.push(new L.LatLng(Y,X));    
+            }
+        }
+    });
+
+    var geojsonRoadtrips = new L.GeoJSON.AJAX("./roadtrips.geojson", {
+        style: {
+            color: "#FC6100",
+            weight: 2,
+            opacity: 0.8,
+            dashArray : "5, 5"},
+
+        onEachFeature: function (feature, layer) {
+            labelText = "<dl><dt><b>" + feature.properties.name + "</dt></b><dt> Time span: " + feature.properties.date + "</dt><dt>Distance: " + feature.properties.distance + " km</dt><dt>Transportation: " + feature.properties.transport + "</dt>"
+            layer.bindLabel(labelText);
+        }
+    });
+
+    Tiles.addTo(map);
+    geojsonRoute.addTo(map);
+
+    // after loading all markers, draw polylines for travel route
+    geojsonRoute.on('data:loaded', function() {
+        stops_old2.push(new L.LatLng(-25,179.99)); // manually adding line from New Zealand to dateline
+        new L.Polyline(stops_old, {color: "#FC6100", weight: 2.5, opacity: 0.8, clickable:false}).addTo(map);
+        new L.Polyline(stops_old2, {color: "#FC6100", weight: 2.5, opacity: 0.8, clickable:false}).addTo(map);
+        new L.Polyline(stops_old3, {color: "#FC6100", weight: 2.5, opacity: 0.8, clickable:false}).addTo(map);
+        new L.Polyline(stops_old4, {color: "#FC6100", weight: 2.5, opacity: 0.8, clickable:false}).addTo(map);
+        new L.Polyline(stops_new, {color: "#00BDFC", weight: 2, opacity: 0.8, clickable:false, dashArray: 10}).addTo(map);
+        })
+    geojsonRoadtrips.addTo(map);
+
+    // Layer-switch - display labels only on zoom level 5+
+    map.on('zoomend', function () {
+        var zoom_level = map.getZoom();
+        if (zoom_level > 3 && map.hasLayer(Tiles2) == false) {
+
+            map.addLayer(Tiles2);
+            }
+        if (zoom_level < 4 && map.hasLayer(Tiles2)) {            
+            map.removeLayer(Tiles2);
+            }
+    }); 
+
+  </script>
+</body>
+</html>
